@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '@/components/Header';
 import { SheetUploader } from '@/components/SheetUploader';
 import { SheetViewer } from '@/components/SheetViewer';
-import { AuditSelector } from '@/components/AuditSelector';
 import { AuditProgress } from '@/components/AuditProgress';
-import { Customer, AuditResult } from '@/lib/mockData';
+import { Customer, CustomerServiceSelection, getAuditsFromServices } from '@/lib/mockData';
 import { uploadSheet, runAudits } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Play } from 'lucide-react';
@@ -14,8 +13,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [selectedCustomerIds, setSelectedCustomerIds] = useState<string[]>([]);
-  const [selectedAudits, setSelectedAudits] = useState<string[]>([]);
+  const [customerSelections, setCustomerSelections] = useState<CustomerServiceSelection[]>([]);
   const [isRunningAudits, setIsRunningAudits] = useState(false);
   const [auditProgress, setAuditProgress] = useState(0);
   const [auditMessage, setAuditMessage] = useState('');
@@ -25,7 +23,7 @@ const Index = () => {
     try {
       const data = await uploadSheet(file, sheetUrl);
       setCustomers(data);
-      setSelectedCustomerIds([]);
+      setCustomerSelections([]);
     } catch (error) {
       console.error('Upload failed:', error);
     } finally {
@@ -33,8 +31,17 @@ const Index = () => {
     }
   };
 
+  const handleNotesChange = (customerId: string, notes: string) => {
+    setCustomers(prev =>
+      prev.map(c => (c.id === customerId ? { ...c, notes } : c))
+    );
+  };
+
   const handleStartAudits = async () => {
-    if (selectedCustomerIds.length === 0 || selectedAudits.length === 0) return;
+    // Filter to only customers with at least one service selected
+    const validSelections = customerSelections.filter(s => s.selectedServices.length > 0);
+    
+    if (validSelections.length === 0) return;
 
     setIsRunningAudits(true);
     setAuditProgress(0);
@@ -42,8 +49,7 @@ const Index = () => {
 
     try {
       const results = await runAudits(
-        selectedCustomerIds,
-        selectedAudits,
+        validSelections,
         (progress, message) => {
           setAuditProgress(progress);
           setAuditMessage(message);
@@ -53,6 +59,7 @@ const Index = () => {
       // Store results and navigate
       sessionStorage.setItem('auditResults', JSON.stringify(results));
       sessionStorage.setItem('customers', JSON.stringify(customers));
+      sessionStorage.setItem('customerSelections', JSON.stringify(validSelections));
       navigate('/results');
     } catch (error) {
       console.error('Audit failed:', error);
@@ -61,7 +68,14 @@ const Index = () => {
     }
   };
 
-  const canStartAudits = selectedCustomerIds.length > 0 && selectedAudits.length > 0;
+  // Count customers with at least one service selected
+  const customersWithServices = customerSelections.filter(s => s.selectedServices.length > 0).length;
+  const canStartAudits = customersWithServices > 0;
+
+  // Calculate total audits that will be run
+  const totalAudits = customerSelections.reduce((acc, sel) => {
+    return acc + getAuditsFromServices(sel.selectedServices).length;
+  }, 0);
 
   return (
     <div className="min-h-screen bg-secondary/30">
@@ -72,7 +86,7 @@ const Index = () => {
         <AuditProgress
           progress={auditProgress}
           message={auditMessage}
-          customerCount={selectedCustomerIds.length}
+          customerCount={customersWithServices}
         />
       )}
 
@@ -132,13 +146,16 @@ const Index = () => {
                     Client Master Data
                   </h2>
                   <p className="mt-1 text-muted-foreground">
-                    Select customers and choose audits to run
+                    Select customers and choose services to promote for each
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
                   <Button
                     variant="outline"
-                    onClick={() => setCustomers([])}
+                    onClick={() => {
+                      setCustomers([]);
+                      setCustomerSelections([]);
+                    }}
                     className="border-border"
                   >
                     Upload New Sheet
@@ -149,33 +166,26 @@ const Index = () => {
                     className="bg-primary text-primary-foreground hover:bg-primary/90"
                   >
                     <Play className="mr-2 h-4 w-4" />
-                    Start Audits for {selectedCustomerIds.length} Customer
-                    {selectedCustomerIds.length !== 1 ? 's' : ''}
+                    Start Audits for {customersWithServices} Customer
+                    {customersWithServices !== 1 ? 's' : ''}
+                    {totalAudits > 0 && ` (${totalAudits} audit${totalAudits !== 1 ? 's' : ''})`}
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </div>
               </div>
 
-              {/* Main Content Grid */}
-              <div className="grid gap-6 lg:grid-cols-[1fr_350px]">
-                {/* Sheet Viewer */}
-                <SheetViewer
-                  data={customers}
-                  selectedIds={selectedCustomerIds}
-                  onSelectionChange={setSelectedCustomerIds}
-                />
-
-                {/* Audit Selection Panel */}
-                <AuditSelector
-                  selectedAudits={selectedAudits}
-                  onSelectionChange={setSelectedAudits}
-                />
-              </div>
+              {/* Sheet Viewer */}
+              <SheetViewer
+                data={customers}
+                customerSelections={customerSelections}
+                onSelectionChange={setCustomerSelections}
+                onNotesChange={handleNotesChange}
+              />
 
               {/* Validation Message */}
-              {selectedCustomerIds.length > 0 && selectedAudits.length === 0 && (
+              {customerSelections.length > 0 && customersWithServices === 0 && (
                 <p className="text-center text-sm text-muted-foreground">
-                  👉 Select at least one audit type to continue
+                  👉 Select at least one service to promote for the selected customers
                 </p>
               )}
             </div>

@@ -12,8 +12,8 @@ export function CustomerCard({ customer, auditResult, isSelected, onSelect }: Cu
   const auditLabels = [
     { key: 'seo' as const, label: 'SEO' },
     { key: 'ppc' as const, label: 'PPC' },
-    { key: 'social' as const, label: 'Social' },
     { key: 'content' as const, label: 'Content' },
+    { key: 'webdesign' as const, label: 'Web Design' },
   ];
 
   return (
@@ -27,7 +27,7 @@ export function CustomerCard({ customer, auditResult, isSelected, onSelect }: Cu
     >
       <div className="flex items-start justify-between">
         <div>
-          <h4 className="font-semibold text-foreground">{customer.companyName}</h4>
+          <h4 className="font-semibold text-foreground">{customer.company}</h4>
           <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
             <Building2 className="h-3.5 w-3.5" />
             {customer.industry}
@@ -49,11 +49,11 @@ export function CustomerCard({ customer, auditResult, isSelected, onSelect }: Cu
       <div className="mt-3 space-y-1 text-sm text-muted-foreground">
         <div className="flex items-center gap-2">
           <Mail className="h-3.5 w-3.5" />
-          {customer.email}
+          {customer.contactEmail}
         </div>
         <div className="flex items-center gap-2">
           <Globe className="h-3.5 w-3.5" />
-          {customer.website}
+          {customer.companyDomain}
         </div>
       </div>
 

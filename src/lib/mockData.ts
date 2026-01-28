@@ -1,66 +1,90 @@
 // Mock customer data for demo purposes
 export interface Customer {
   id: string;
-  companyName: string;
+  company: string;
   contactName: string;
-  email: string;
-  phone: string;
-  website: string;
-  industry: string;
+  contactEmail: string;
+  companyEmail: string;
+  companyDomain: string;
   location: string;
+  industry: string;
+  pastServices: string[];
+  notes: string;
   status: 'Active' | 'Prospect' | 'Lead';
-  lastContact: string;
 }
+
+// Service to Audit mapping
+export const serviceToAuditMap: Record<string, string> = {
+  'seo': 'seo',
+  'ppc': 'ppc',
+  'content-marketing': 'content',
+  'website-design': 'webdesign',
+  'website-redesign': 'webdesign',
+};
+
+// Audit types derived from services
+export const auditTypes = [
+  { id: 'seo', name: 'SEO Audit', description: 'Analyze search engine optimization', serviceId: 'seo' },
+  { id: 'ppc', name: 'PPC Audit', description: 'Review paid advertising performance', serviceId: 'ppc' },
+  { id: 'content', name: 'Content Audit', description: 'Assess content quality and strategy', serviceId: 'content-marketing' },
+  { id: 'webdesign', name: 'Web Design Audit', description: 'Evaluate website design and UX', serviceId: 'website-design' },
+];
 
 export interface AuditResult {
   customerId: string;
   audits: {
     seo: 'completed' | 'pending' | 'not_started';
     ppc: 'completed' | 'pending' | 'not_started';
-    social: 'completed' | 'pending' | 'not_started';
     content: 'completed' | 'pending' | 'not_started';
+    webdesign: 'completed' | 'pending' | 'not_started';
   };
   summary?: string;
 }
 
-export const mockCustomers: Customer[] = [
-  { id: '1', companyName: 'Acme Corporation', contactName: 'John Smith', email: 'john@acme.com', phone: '(555) 123-4567', website: 'acme.com', industry: 'Manufacturing', location: 'Chicago, IL', status: 'Active', lastContact: '2025-01-15' },
-  { id: '2', companyName: 'TechStart Inc', contactName: 'Sarah Johnson', email: 'sarah@techstart.io', phone: '(555) 234-5678', website: 'techstart.io', industry: 'Technology', location: 'San Francisco, CA', status: 'Prospect', lastContact: '2025-01-20' },
-  { id: '3', companyName: 'Green Gardens LLC', contactName: 'Mike Davis', email: 'mike@greengardens.com', phone: '(555) 345-6789', website: 'greengardens.com', industry: 'Landscaping', location: 'Austin, TX', status: 'Active', lastContact: '2025-01-18' },
-  { id: '4', companyName: 'Coastal Realty', contactName: 'Jennifer Lee', email: 'jennifer@coastalrealty.com', phone: '(555) 456-7890', website: 'coastalrealty.com', industry: 'Real Estate', location: 'Miami, FL', status: 'Lead', lastContact: '2025-01-22' },
-  { id: '5', companyName: 'Peak Fitness', contactName: 'Chris Brown', email: 'chris@peakfitness.com', phone: '(555) 567-8901', website: 'peakfitness.com', industry: 'Health & Fitness', location: 'Denver, CO', status: 'Active', lastContact: '2025-01-10' },
-  { id: '6', companyName: 'Swift Logistics', contactName: 'Amanda Wilson', email: 'amanda@swiftlogistics.com', phone: '(555) 678-9012', website: 'swiftlogistics.com', industry: 'Transportation', location: 'Phoenix, AZ', status: 'Prospect', lastContact: '2025-01-25' },
-  { id: '7', companyName: 'Bright Dental', contactName: 'Dr. Robert Chen', email: 'rchen@brightdental.com', phone: '(555) 789-0123', website: 'brightdental.com', industry: 'Healthcare', location: 'Seattle, WA', status: 'Active', lastContact: '2025-01-12' },
-  { id: '8', companyName: 'Urban Eats', contactName: 'Lisa Martinez', email: 'lisa@urbaneats.com', phone: '(555) 890-1234', website: 'urbaneats.com', industry: 'Restaurant', location: 'New York, NY', status: 'Lead', lastContact: '2025-01-28' },
-  { id: '9', companyName: 'Blue Sky Travel', contactName: 'David Thompson', email: 'david@blueskytravel.com', phone: '(555) 901-2345', website: 'blueskytravel.com', industry: 'Travel', location: 'Orlando, FL', status: 'Active', lastContact: '2025-01-14' },
-  { id: '10', companyName: 'Modern Interiors', contactName: 'Emily White', email: 'emily@moderninteriors.com', phone: '(555) 012-3456', website: 'moderninteriors.com', industry: 'Interior Design', location: 'Los Angeles, CA', status: 'Prospect', lastContact: '2025-01-23' },
-  { id: '11', companyName: 'Harbor Law Firm', contactName: 'James Miller', email: 'jmiller@harborlaw.com', phone: '(555) 111-2222', website: 'harborlaw.com', industry: 'Legal', location: 'Boston, MA', status: 'Active', lastContact: '2025-01-08' },
-  { id: '12', companyName: 'Summit Financial', contactName: 'Patricia Garcia', email: 'patricia@summitfinancial.com', phone: '(555) 222-3333', website: 'summitfinancial.com', industry: 'Finance', location: 'Charlotte, NC', status: 'Lead', lastContact: '2025-01-26' },
-  { id: '13', companyName: 'Paws & Claws', contactName: 'Tom Anderson', email: 'tom@pawsandclaws.com', phone: '(555) 333-4444', website: 'pawsandclaws.com', industry: 'Pet Services', location: 'Portland, OR', status: 'Active', lastContact: '2025-01-19' },
-  { id: '14', companyName: 'Clean Sweep Services', contactName: 'Nancy Taylor', email: 'nancy@cleansweep.com', phone: '(555) 444-5555', website: 'cleansweep.com', industry: 'Cleaning Services', location: 'Atlanta, GA', status: 'Prospect', lastContact: '2025-01-21' },
-  { id: '15', companyName: 'Valley Auto Shop', contactName: 'Kevin Moore', email: 'kevin@valleyauto.com', phone: '(555) 555-6666', website: 'valleyauto.com', industry: 'Automotive', location: 'Las Vegas, NV', status: 'Active', lastContact: '2025-01-16' },
-];
-
+// Services available to promote (mapped to audits)
 export const services = [
-  { id: 'website-design', name: 'Website Design', description: 'Custom responsive website design tailored to your brand' },
-  { id: 'website-redesign', name: 'Website Redesign', description: 'Modernize your existing website with fresh design' },
-  { id: 'seo', name: 'SEO Services', description: 'Improve search rankings and organic traffic' },
-  { id: 'ppc', name: 'PPC Advertising', description: 'Google Ads and paid search campaign management' },
-  { id: 'social-media', name: 'Social Media Marketing', description: 'Build your brand presence on social platforms' },
-  { id: 'content-marketing', name: 'Content Marketing', description: 'Engage audiences with compelling content' },
-  { id: 'email-marketing', name: 'Email Marketing', description: 'Nurture leads with targeted email campaigns' },
-  { id: 'branding', name: 'Branding & Identity', description: 'Create a memorable brand identity' },
-  { id: 'video-production', name: 'Video Production', description: 'Professional video content for your business' },
-  { id: 'photography', name: 'Photography', description: 'High-quality photos for web and marketing' },
-  { id: 'hosting', name: 'Website Hosting', description: 'Fast, secure, and reliable hosting solutions' },
-  { id: 'maintenance', name: 'Website Maintenance', description: 'Keep your website updated and secure' },
+  { id: 'seo', name: 'SEO Services', description: 'Improve search rankings and organic traffic', auditId: 'seo' },
+  { id: 'ppc', name: 'PPC Advertising', description: 'Google Ads and paid search campaign management', auditId: 'ppc' },
+  { id: 'content-marketing', name: 'Content Marketing', description: 'Engage audiences with compelling content', auditId: 'content' },
+  { id: 'website-design', name: 'Web Design', description: 'Custom responsive website design tailored to your brand', auditId: 'webdesign' },
+  { id: 'website-redesign', name: 'Website Redesign', description: 'Modernize your existing website with fresh design', auditId: 'webdesign' },
+  { id: 'social-media', name: 'Social Media Marketing', description: 'Build your brand presence on social platforms', auditId: null },
+  { id: 'email-marketing', name: 'Email Marketing', description: 'Nurture leads with targeted email campaigns', auditId: null },
+  { id: 'branding', name: 'Branding & Identity', description: 'Create a memorable brand identity', auditId: null },
+  { id: 'video-production', name: 'Video Production', description: 'Professional video content for your business', auditId: null },
+  { id: 'photography', name: 'Photography', description: 'High-quality photos for web and marketing', auditId: null },
+  { id: 'hosting', name: 'Website Hosting', description: 'Fast, secure, and reliable hosting solutions', auditId: null },
+  { id: 'maintenance', name: 'Website Maintenance', description: 'Keep your website updated and secure', auditId: null },
 ];
 
-export const auditTypes = [
-  { id: 'seo', name: 'SEO Audit', description: 'Analyze search engine optimization' },
-  { id: 'ppc', name: 'PPC Audit', description: 'Review paid advertising performance' },
-  { id: 'social', name: 'Social Media Audit', description: 'Evaluate social media presence' },
-  { id: 'content', name: 'Content Audit', description: 'Assess content quality and strategy' },
+// Get unique audits from selected services
+export function getAuditsFromServices(serviceIds: string[]): string[] {
+  const audits = new Set<string>();
+  serviceIds.forEach(serviceId => {
+    const service = services.find(s => s.id === serviceId);
+    if (service?.auditId) {
+      audits.add(service.auditId);
+    }
+  });
+  return Array.from(audits);
+}
+
+export const mockCustomers: Customer[] = [
+  { id: '1', company: 'Acme Corporation', contactName: 'John Smith', contactEmail: 'john@acme.com', companyEmail: 'info@acme.com', companyDomain: 'acme.com', location: 'Chicago, IL', industry: 'Manufacturing', pastServices: ['seo', 'ppc'], notes: '', status: 'Active' },
+  { id: '2', company: 'TechStart Inc', contactName: 'Sarah Johnson', contactEmail: 'sarah@techstart.io', companyEmail: 'hello@techstart.io', companyDomain: 'techstart.io', location: 'San Francisco, CA', industry: 'Technology', pastServices: ['website-design'], notes: '', status: 'Prospect' },
+  { id: '3', company: 'Green Gardens LLC', contactName: 'Mike Davis', contactEmail: 'mike@greengardens.com', companyEmail: 'contact@greengardens.com', companyDomain: 'greengardens.com', location: 'Austin, TX', industry: 'Landscaping', pastServices: ['seo', 'content-marketing'], notes: '', status: 'Active' },
+  { id: '4', company: 'Coastal Realty', contactName: 'Jennifer Lee', contactEmail: 'jennifer@coastalrealty.com', companyEmail: 'sales@coastalrealty.com', companyDomain: 'coastalrealty.com', location: 'Miami, FL', industry: 'Real Estate', pastServices: [], notes: 'New lead from website', status: 'Lead' },
+  { id: '5', company: 'Peak Fitness', contactName: 'Chris Brown', contactEmail: 'chris@peakfitness.com', companyEmail: 'info@peakfitness.com', companyDomain: 'peakfitness.com', location: 'Denver, CO', industry: 'Health & Fitness', pastServices: ['social-media', 'ppc'], notes: '', status: 'Active' },
+  { id: '6', company: 'Swift Logistics', contactName: 'Amanda Wilson', contactEmail: 'amanda@swiftlogistics.com', companyEmail: 'support@swiftlogistics.com', companyDomain: 'swiftlogistics.com', location: 'Phoenix, AZ', industry: 'Transportation', pastServices: ['website-redesign'], notes: '', status: 'Prospect' },
+  { id: '7', company: 'Bright Dental', contactName: 'Dr. Robert Chen', contactEmail: 'rchen@brightdental.com', companyEmail: 'appointments@brightdental.com', companyDomain: 'brightdental.com', location: 'Seattle, WA', industry: 'Healthcare', pastServices: ['seo', 'website-design'], notes: 'Interested in content marketing', status: 'Active' },
+  { id: '8', company: 'Urban Eats', contactName: 'Lisa Martinez', contactEmail: 'lisa@urbaneats.com', companyEmail: 'orders@urbaneats.com', companyDomain: 'urbaneats.com', location: 'New York, NY', industry: 'Restaurant', pastServices: [], notes: 'Referred by Coastal Realty', status: 'Lead' },
+  { id: '9', company: 'Blue Sky Travel', contactName: 'David Thompson', contactEmail: 'david@blueskytravel.com', companyEmail: 'bookings@blueskytravel.com', companyDomain: 'blueskytravel.com', location: 'Orlando, FL', industry: 'Travel', pastServices: ['ppc', 'email-marketing'], notes: '', status: 'Active' },
+  { id: '10', company: 'Modern Interiors', contactName: 'Emily White', contactEmail: 'emily@moderninteriors.com', companyEmail: 'design@moderninteriors.com', companyDomain: 'moderninteriors.com', location: 'Los Angeles, CA', industry: 'Interior Design', pastServices: ['branding', 'photography'], notes: '', status: 'Prospect' },
+  { id: '11', company: 'Harbor Law Firm', contactName: 'James Miller', contactEmail: 'jmiller@harborlaw.com', companyEmail: 'legal@harborlaw.com', companyDomain: 'harborlaw.com', location: 'Boston, MA', industry: 'Legal', pastServices: ['seo', 'content-marketing'], notes: '', status: 'Active' },
+  { id: '12', company: 'Summit Financial', contactName: 'Patricia Garcia', contactEmail: 'patricia@summitfinancial.com', companyEmail: 'invest@summitfinancial.com', companyDomain: 'summitfinancial.com', location: 'Charlotte, NC', industry: 'Finance', pastServices: [], notes: 'High priority lead', status: 'Lead' },
+  { id: '13', company: 'Paws & Claws', contactName: 'Tom Anderson', contactEmail: 'tom@pawsandclaws.com', companyEmail: 'pets@pawsandclaws.com', companyDomain: 'pawsandclaws.com', location: 'Portland, OR', industry: 'Pet Services', pastServices: ['social-media'], notes: '', status: 'Active' },
+  { id: '14', company: 'Clean Sweep Services', contactName: 'Nancy Taylor', contactEmail: 'nancy@cleansweep.com', companyEmail: 'book@cleansweep.com', companyDomain: 'cleansweep.com', location: 'Atlanta, GA', industry: 'Cleaning Services', pastServices: ['website-design', 'seo'], notes: '', status: 'Prospect' },
+  { id: '15', company: 'Valley Auto Shop', contactName: 'Kevin Moore', contactEmail: 'kevin@valleyauto.com', companyEmail: 'service@valleyauto.com', companyDomain: 'valleyauto.com', location: 'Las Vegas, NV', industry: 'Automotive', pastServices: ['ppc'], notes: 'Looking for complete rebrand', status: 'Active' },
 ];
 
 export const generateMockAuditSummary = (companyName: string): string => {
@@ -135,3 +159,9 @@ Best regards,
 *This email was generated as part of the B40 Marketing Demo. Replace with your actual content.*`
   };
 };
+
+// Customer selection with services type
+export interface CustomerServiceSelection {
+  customerId: string;
+  selectedServices: string[];
+}
