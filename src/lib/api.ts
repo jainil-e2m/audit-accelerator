@@ -1,0 +1,145 @@
+/**
+ * API Stub Functions
+ * 
+ * These functions simulate backend API calls for the demo.
+ * In production, replace these with actual API endpoint calls.
+ * 
+ * Integration notes:
+ * - POST /api/upload-sheet: Should accept file upload or Google Sheets URL
+ * - POST /api/run-audits: Should accept customer IDs and audit types, return progress
+ * - POST /api/generate-email: Should use AI/templates to generate personalized emails
+ * - POST /api/send-email: Should integrate with email service (SendGrid, etc.)
+ */
+
+import { Customer, mockCustomers, AuditResult, generateMockAuditSummary, generateMockEmailDraft } from './mockData';
+
+// Simulated delay for realistic demo feel
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * Upload Sheet API Stub
+ * 
+ * DEMO: Returns mock customer data
+ * PRODUCTION: Parse uploaded CSV/XLSX or fetch from Google Sheets API
+ */
+export async function uploadSheet(file?: File, sheetUrl?: string): Promise<Customer[]> {
+  await delay(1500);
+  
+  // In production, implement actual file parsing here
+  // For CSV: Use PapaParse
+  // For XLSX: Use xlsx library
+  // For Google Sheets: Use Google Sheets API
+  
+  console.log('[DEMO] uploadSheet called', { file: file?.name, sheetUrl });
+  
+  // Return mock data for demo
+  return mockCustomers;
+}
+
+/**
+ * Run Audits API Stub
+ * 
+ * DEMO: Simulates progress and returns mock audit results
+ * PRODUCTION: Trigger actual audit tools (Screaming Frog, SEMrush, etc.)
+ */
+export async function runAudits(
+  customerIds: string[],
+  auditTypes: string[],
+  onProgress?: (progress: number, message: string) => void
+): Promise<AuditResult[]> {
+  const totalSteps = customerIds.length * auditTypes.length;
+  let completedSteps = 0;
+  
+  const results: AuditResult[] = [];
+  
+  for (const customerId of customerIds) {
+    const customer = mockCustomers.find(c => c.id === customerId);
+    const audits: AuditResult['audits'] = {
+      seo: 'not_started',
+      ppc: 'not_started',
+      social: 'not_started',
+      content: 'not_started',
+    };
+    
+    for (const auditType of auditTypes) {
+      await delay(800 + Math.random() * 400);
+      completedSteps++;
+      
+      const progress = Math.round((completedSteps / totalSteps) * 100);
+      const message = `Running ${auditType.toUpperCase()} audit for ${customer?.companyName || customerId}...`;
+      
+      onProgress?.(progress, message);
+      
+      // Mark audit as completed
+      if (auditType === 'seo') audits.seo = 'completed';
+      if (auditType === 'ppc') audits.ppc = 'completed';
+      if (auditType === 'social') audits.social = 'completed';
+      if (auditType === 'content') audits.content = 'completed';
+    }
+    
+    results.push({
+      customerId,
+      audits,
+      summary: generateMockAuditSummary(customer?.companyName || 'Unknown'),
+    });
+  }
+  
+  return results;
+}
+
+/**
+ * Generate Email API Stub
+ * 
+ * DEMO: Returns templated mock email
+ * PRODUCTION: Use AI (GPT, Claude) or template engine for personalization
+ */
+export async function generateEmail(
+  customerId: string,
+  selectedServices: string[],
+  auditSummary: string
+): Promise<{ subject: string; body: string; to: string }> {
+  await delay(1200);
+  
+  const customer = mockCustomers.find(c => c.id === customerId);
+  
+  if (!customer) {
+    throw new Error('Customer not found');
+  }
+  
+  const { subject, body } = generateMockEmailDraft(
+    customer.companyName,
+    customer.contactName,
+    selectedServices,
+    auditSummary
+  );
+  
+  return {
+    subject,
+    body,
+    to: customer.email,
+  };
+}
+
+/**
+ * Send Email API Stub
+ * 
+ * DEMO: Simulates sending and returns success
+ * PRODUCTION: Integrate with SendGrid, Mailgun, AWS SES, etc.
+ */
+export async function sendEmail(
+  to: string,
+  subject: string,
+  body: string
+): Promise<{ success: boolean; messageId: string }> {
+  await delay(1000);
+  
+  console.log('[DEMO] sendEmail called', { to, subject });
+  
+  // In production, implement actual email sending here
+  // Example: await sendgrid.send({ to, subject, html: body });
+  
+  return {
+    success: true,
+    messageId: `demo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+  };
+}
