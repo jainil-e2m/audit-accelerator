@@ -4,7 +4,7 @@ import { Header } from '@/components/Header';
 import { CustomerCard } from '@/components/CustomerCard';
 import { ServiceSelector } from '@/components/ServiceSelector';
 import { EmailEditor } from '@/components/EmailEditor';
-import { Customer, AuditResult } from '@/lib/mockData';
+import { Customer, AuditResult, CustomerServiceSelection } from '@/lib/mockData';
 import { generateEmail, sendEmail } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +16,7 @@ const Results = () => {
   
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [auditResults, setAuditResults] = useState<AuditResult[]>([]);
+  const [customerSelections, setCustomerSelections] = useState<CustomerServiceSelection[]>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [showEmailEditor, setShowEmailEditor] = useState(false);
@@ -26,19 +27,25 @@ const Results = () => {
   useEffect(() => {
     const storedCustomers = sessionStorage.getItem('customers');
     const storedResults = sessionStorage.getItem('auditResults');
+    const storedSelections = sessionStorage.getItem('customerSelections');
     
     if (storedCustomers && storedResults) {
       const parsedCustomers: Customer[] = JSON.parse(storedCustomers);
       const parsedResults: AuditResult[] = JSON.parse(storedResults);
+      const parsedSelections: CustomerServiceSelection[] = storedSelections ? JSON.parse(storedSelections) : [];
       
       // Only show customers that have audit results
       const auditedCustomerIds = parsedResults.map(r => r.customerId);
       setCustomers(parsedCustomers.filter(c => auditedCustomerIds.includes(c.id)));
       setAuditResults(parsedResults);
+      setCustomerSelections(parsedSelections);
       
-      // Auto-select first customer
+      // Auto-select first customer and their services
       if (parsedResults.length > 0) {
-        setSelectedCustomerId(parsedResults[0].customerId);
+        const firstCustomerId = parsedResults[0].customerId;
+        setSelectedCustomerId(firstCustomerId);
+        const firstSelection = parsedSelections.find(s => s.customerId === firstCustomerId);
+        setSelectedServices(firstSelection?.selectedServices || []);
       }
     } else {
       // No data, redirect to home
@@ -48,6 +55,14 @@ const Results = () => {
 
   const selectedCustomer = customers.find(c => c.id === selectedCustomerId);
   const selectedAuditResult = auditResults.find(r => r.customerId === selectedCustomerId);
+
+  const handleCustomerSelect = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setShowEmailEditor(false);
+    // Load the services that were selected for this customer
+    const selection = customerSelections.find(s => s.customerId === customerId);
+    setSelectedServices(selection?.selectedServices || []);
+  };
 
   const handleGenerateEmail = async () => {
     if (!selectedCustomerId || selectedServices.length === 0) return;
@@ -131,10 +146,7 @@ const Results = () => {
                   customer={customer}
                   auditResult={auditResults.find(r => r.customerId === customer.id)}
                   isSelected={selectedCustomerId === customer.id}
-                  onSelect={() => {
-                    setSelectedCustomerId(customer.id);
-                    setShowEmailEditor(false);
-                  }}
+                  onSelect={() => handleCustomerSelect(customer.id)}
                 />
               ))}
             </div>
@@ -162,7 +174,7 @@ const Results = () => {
                     <div className="mb-4 flex items-center gap-2">
                       <FileText className="h-5 w-5 text-primary" />
                       <h3 className="font-semibold text-foreground">
-                        Audit Summary: {selectedCustomer.companyName}
+                        Audit Summary: {selectedCustomer.company}
                       </h3>
                     </div>
                     <div className="prose prose-sm max-w-none text-muted-foreground">

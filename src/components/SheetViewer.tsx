@@ -1,13 +1,17 @@
 import { useState, useMemo } from 'react';
-import { Customer } from '@/lib/mockData';
-import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Customer, services, CustomerServiceSelection } from '@/lib/mockData';
+import { ChevronUp, ChevronDown, Search, ChevronLeft, ChevronRight, Edit2, Check, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 interface SheetViewerProps {
   data: Customer[];
-  selectedIds: string[];
-  onSelectionChange: (ids: string[]) => void;
+  customerSelections: CustomerServiceSelection[];
+  onSelectionChange: (selections: CustomerServiceSelection[]) => void;
+  onNotesChange: (customerId: string, notes: string) => void;
 }
 
 type SortField = keyof Customer;
@@ -15,11 +19,19 @@ type SortDirection = 'asc' | 'desc';
 
 const ROWS_PER_PAGE = 10;
 
-export function SheetViewer({ data, selectedIds, onSelectionChange }: SheetViewerProps) {
+// Services that map to audits (for the "Services to Promote" selection)
+const promotableServices = services.filter(s => s.auditId !== null);
+
+export function SheetViewer({ data, customerSelections, onSelectionChange, onNotesChange }: SheetViewerProps) {
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortField, setSortField] = useState<SortField>('companyName');
+  const [sortField, setSortField] = useState<SortField>('company');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
   const [currentPage, setCurrentPage] = useState(1);
+  const [editingNotesId, setEditingNotesId] = useState<string | null>(null);
+  const [tempNotes, setTempNotes] = useState('');
+
+  // Get selected customer IDs
+  const selectedIds = customerSelections.map(s => s.customerId);
 
   // Filter and sort data
   const processedData = useMemo(() => {
@@ -30,9 +42,9 @@ export function SheetViewer({ data, selectedIds, onSelectionChange }: SheetViewe
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (row) =>
-          row.companyName.toLowerCase().includes(query) ||
+          row.company.toLowerCase().includes(query) ||
           row.contactName.toLowerCase().includes(query) ||
-          row.email.toLowerCase().includes(query) ||
+          row.contactEmail.toLowerCase().includes(query) ||
           row.industry.toLowerCase().includes(query)
       );
     }
@@ -41,7 +53,9 @@ export function SheetViewer({ data, selectedIds, onSelectionChange }: SheetViewe
     result.sort((a, b) => {
       const aVal = a[sortField];
       const bVal = b[sortField];
-      const comparison = String(aVal).localeCompare(String(bVal));
+      const aStr = Array.isArray(aVal) ? aVal.join(',') : String(aVal);
+      const bStr = Array.isArray(bVal) ? bVal.join(',') : String(bVal);
+      const comparison = aStr.localeCompare(bStr);
       return sortDirection === 'asc' ? comparison : -comparison;
     });
 
@@ -64,11 +78,35 @@ export function SheetViewer({ data, selectedIds, onSelectionChange }: SheetViewe
     }
   };
 
-  const toggleRow = (id: string) => {
-    if (selectedIds.includes(id)) {
-      onSelectionChange(selectedIds.filter((i) => i !== id));
+  const toggleRowSelection = (customerId: string) => {
+    const existing = customerSelections.find(s => s.customerId === customerId);
+    if (existing) {
+      // Remove from selection
+      onSelectionChange(customerSelections.filter(s => s.customerId !== customerId));
     } else {
-      onSelectionChange([...selectedIds, id]);
+      // Add to selection with empty services
+      onSelectionChange([...customerSelections, { customerId, selectedServices: [] }]);
+    }
+  };
+
+  const toggleServiceForCustomer = (customerId: string, serviceId: string) => {
+    const existing = customerSelections.find(s => s.customerId === customerId);
+    if (!existing) {
+      // Customer not selected, select them with this service
+      onSelectionChange([...customerSelections, { customerId, selectedServices: [serviceId] }]);
+    } else {
+      const hasService = existing.selectedServices.includes(serviceId);
+      const newServices = hasService
+        ? existing.selectedServices.filter(s => s !== serviceId)
+        : [...existing.selectedServices, serviceId];
+      
+      onSelectionChange(
+        customerSelections.map(s =>
+          s.customerId === customerId
+            ? { ...s, selectedServices: newServices }
+            : s
+        )
+      );
     }
   };
 
@@ -76,8 +114,34 @@ export function SheetViewer({ data, selectedIds, onSelectionChange }: SheetViewe
     if (selectedIds.length === processedData.length) {
       onSelectionChange([]);
     } else {
-      onSelectionChange(processedData.map((r) => r.id));
+      const existingMap = new Map(customerSelections.map(s => [s.customerId, s.selectedServices]));
+      onSelectionChange(
+        processedData.map(r => ({
+          customerId: r.id,
+          selectedServices: existingMap.get(r.id) || []
+        }))
+      );
     }
+  };
+
+  const getSelectedServicesForCustomer = (customerId: string): string[] => {
+    return customerSelections.find(s => s.customerId === customerId)?.selectedServices || [];
+  };
+
+  const startEditingNotes = (customerId: string, currentNotes: string) => {
+    setEditingNotesId(customerId);
+    setTempNotes(currentNotes);
+  };
+
+  const saveNotes = (customerId: string) => {
+    onNotesChange(customerId, tempNotes);
+    setEditingNotesId(null);
+    setTempNotes('');
+  };
+
+  const cancelEditingNotes = () => {
+    setEditingNotesId(null);
+    setTempNotes('');
   };
 
   const SortIcon = ({ field }: { field: SortField }) => {
@@ -89,12 +153,13 @@ export function SheetViewer({ data, selectedIds, onSelectionChange }: SheetViewe
     );
   };
 
-  const columns: { field: SortField; label: string }[] = [
-    { field: 'companyName', label: 'Company' },
+  const columns: { field: SortField; label: string; width?: string }[] = [
+    { field: 'company', label: 'Company' },
     { field: 'contactName', label: 'Contact' },
-    { field: 'email', label: 'Email' },
-    { field: 'industry', label: 'Industry' },
+    { field: 'contactEmail', label: 'Contact Email' },
+    { field: 'companyDomain', label: 'Domain' },
     { field: 'location', label: 'Location' },
+    { field: 'industry', label: 'Industry' },
     { field: 'status', label: 'Status' },
   ];
 
@@ -144,7 +209,7 @@ export function SheetViewer({ data, selectedIds, onSelectionChange }: SheetViewe
                 <th
                   key={col.field}
                   onClick={() => handleSort(col.field)}
-                  className="cursor-pointer px-4 py-3 text-left text-sm font-medium"
+                  className="cursor-pointer px-4 py-3 text-left text-sm font-medium whitespace-nowrap"
                 >
                   <div className="flex items-center gap-1">
                     {col.label}
@@ -152,43 +217,135 @@ export function SheetViewer({ data, selectedIds, onSelectionChange }: SheetViewe
                   </div>
                 </th>
               ))}
+              <th className="px-4 py-3 text-left text-sm font-medium">Services to Promote</th>
+              <th className="px-4 py-3 text-left text-sm font-medium">Notes</th>
             </tr>
           </thead>
           <tbody>
-            {paginatedData.map((row) => (
-              <tr
-                key={row.id}
-                className={`border-b transition-colors hover:bg-secondary/50 ${
-                  selectedIds.includes(row.id) ? 'bg-primary/5' : ''
-                }`}
-              >
-                <td className="px-4 py-3">
-                  <Checkbox
-                    checked={selectedIds.includes(row.id)}
-                    onCheckedChange={() => toggleRow(row.id)}
-                    aria-label={`Select ${row.companyName}`}
-                  />
-                </td>
-                <td className="table-cell font-medium">{row.companyName}</td>
-                <td className="table-cell">{row.contactName}</td>
-                <td className="table-cell">{row.email}</td>
-                <td className="table-cell">{row.industry}</td>
-                <td className="table-cell">{row.location}</td>
-                <td className="table-cell">
-                  <span
-                    className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      row.status === 'Active'
-                        ? 'bg-primary/10 text-primary'
-                        : row.status === 'Prospect'
-                        ? 'bg-accent/10 text-accent'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {row.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
+            {paginatedData.map((row) => {
+              const isSelected = selectedIds.includes(row.id);
+              const customerServices = getSelectedServicesForCustomer(row.id);
+              
+              return (
+                <tr
+                  key={row.id}
+                  className={`border-b transition-colors hover:bg-secondary/50 ${
+                    isSelected ? 'bg-primary/5' : ''
+                  }`}
+                >
+                  <td className="px-4 py-3">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleRowSelection(row.id)}
+                      aria-label={`Select ${row.company}`}
+                    />
+                  </td>
+                  <td className="table-cell font-medium">{row.company}</td>
+                  <td className="table-cell">{row.contactName}</td>
+                  <td className="table-cell">{row.contactEmail}</td>
+                  <td className="table-cell">{row.companyDomain}</td>
+                  <td className="table-cell">{row.location}</td>
+                  <td className="table-cell">{row.industry}</td>
+                  <td className="table-cell">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        row.status === 'Active'
+                          ? 'bg-primary/10 text-primary'
+                          : row.status === 'Prospect'
+                          ? 'bg-accent/10 text-accent'
+                          : 'bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {row.status}
+                    </span>
+                  </td>
+                  {/* Services to Promote */}
+                  <td className="px-4 py-3 min-w-[200px]">
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-auto min-h-[32px] w-full justify-start text-left font-normal"
+                        >
+                          {customerServices.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {customerServices.map(serviceId => {
+                                const service = promotableServices.find(s => s.id === serviceId);
+                                return service ? (
+                                  <Badge key={serviceId} variant="secondary" className="text-xs">
+                                    {service.name}
+                                  </Badge>
+                                ) : null;
+                              })}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">Select services...</span>
+                          )}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80 p-2" align="start">
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-muted-foreground mb-2 px-2">
+                            Select services to promote (generates corresponding audits)
+                          </p>
+                          {promotableServices.map(service => (
+                            <label
+                              key={service.id}
+                              className={`flex items-start gap-2 rounded-md p-2 cursor-pointer hover:bg-secondary/50 ${
+                                customerServices.includes(service.id) ? 'bg-primary/5' : ''
+                              }`}
+                            >
+                              <Checkbox
+                                checked={customerServices.includes(service.id)}
+                                onCheckedChange={() => {
+                                  toggleServiceForCustomer(row.id, service.id);
+                                }}
+                                className="mt-0.5"
+                              />
+                              <div>
+                                <span className="text-sm font-medium">{service.name}</span>
+                                <p className="text-xs text-muted-foreground">{service.description}</p>
+                              </div>
+                            </label>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </td>
+                  {/* Notes */}
+                  <td className="px-4 py-3 min-w-[200px]">
+                    {editingNotesId === row.id ? (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          value={tempNotes}
+                          onChange={(e) => setTempNotes(e.target.value)}
+                          className="h-8 text-sm"
+                          placeholder="Add notes..."
+                          autoFocus
+                        />
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => saveNotes(row.id)}>
+                          <Check className="h-4 w-4 text-primary" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={cancelEditingNotes}>
+                          <X className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div 
+                        className="flex items-center gap-2 cursor-pointer group"
+                        onClick={() => startEditingNotes(row.id, row.notes)}
+                      >
+                        <span className="text-sm text-muted-foreground truncate max-w-[150px]">
+                          {row.notes || 'Click to add notes...'}
+                        </span>
+                        <Edit2 className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

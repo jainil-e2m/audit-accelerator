@@ -11,7 +11,7 @@
  * - POST /api/send-email: Should integrate with email service (SendGrid, etc.)
  */
 
-import { Customer, mockCustomers, AuditResult, generateMockAuditSummary, generateMockEmailDraft } from './mockData';
+import { Customer, mockCustomers, AuditResult, generateMockAuditSummary, generateMockEmailDraft, getAuditsFromServices, CustomerServiceSelection } from './mockData';
 
 // Simulated delay for realistic demo feel
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -43,44 +43,55 @@ export async function uploadSheet(file?: File, sheetUrl?: string): Promise<Custo
  * PRODUCTION: Trigger actual audit tools (Screaming Frog, SEMrush, etc.)
  */
 export async function runAudits(
-  customerIds: string[],
-  auditTypes: string[],
+  customerServiceSelections: CustomerServiceSelection[],
   onProgress?: (progress: number, message: string) => void
 ): Promise<AuditResult[]> {
-  const totalSteps = customerIds.length * auditTypes.length;
-  let completedSteps = 0;
+  // Calculate total audit steps across all customers
+  let totalSteps = 0;
+  const customerAudits: { customerId: string; audits: string[] }[] = [];
   
+  for (const selection of customerServiceSelections) {
+    const audits = getAuditsFromServices(selection.selectedServices);
+    customerAudits.push({ customerId: selection.customerId, audits });
+    totalSteps += audits.length;
+  }
+  
+  if (totalSteps === 0) {
+    totalSteps = 1; // Prevent division by zero
+  }
+  
+  let completedSteps = 0;
   const results: AuditResult[] = [];
   
-  for (const customerId of customerIds) {
+  for (const { customerId, audits } of customerAudits) {
     const customer = mockCustomers.find(c => c.id === customerId);
-    const audits: AuditResult['audits'] = {
+    const auditResults: AuditResult['audits'] = {
       seo: 'not_started',
       ppc: 'not_started',
-      social: 'not_started',
       content: 'not_started',
+      webdesign: 'not_started',
     };
     
-    for (const auditType of auditTypes) {
+    for (const auditType of audits) {
       await delay(800 + Math.random() * 400);
       completedSteps++;
       
       const progress = Math.round((completedSteps / totalSteps) * 100);
-      const message = `Running ${auditType.toUpperCase()} audit for ${customer?.companyName || customerId}...`;
+      const message = `Running ${auditType.toUpperCase()} audit for ${customer?.company || customerId}...`;
       
       onProgress?.(progress, message);
       
       // Mark audit as completed
-      if (auditType === 'seo') audits.seo = 'completed';
-      if (auditType === 'ppc') audits.ppc = 'completed';
-      if (auditType === 'social') audits.social = 'completed';
-      if (auditType === 'content') audits.content = 'completed';
+      if (auditType === 'seo') auditResults.seo = 'completed';
+      if (auditType === 'ppc') auditResults.ppc = 'completed';
+      if (auditType === 'content') auditResults.content = 'completed';
+      if (auditType === 'webdesign') auditResults.webdesign = 'completed';
     }
     
     results.push({
       customerId,
-      audits,
-      summary: generateMockAuditSummary(customer?.companyName || 'Unknown'),
+      audits: auditResults,
+      summary: generateMockAuditSummary(customer?.company || 'Unknown'),
     });
   }
   
@@ -107,7 +118,7 @@ export async function generateEmail(
   }
   
   const { subject, body } = generateMockEmailDraft(
-    customer.companyName,
+    customer.company,
     customer.contactName,
     selectedServices,
     auditSummary
@@ -116,7 +127,7 @@ export async function generateEmail(
   return {
     subject,
     body,
-    to: customer.email,
+    to: customer.contactEmail,
   };
 }
 
